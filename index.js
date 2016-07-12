@@ -90,7 +90,7 @@ let getLatestRelease = (platform, version, arch) => {
         return fs.readdirSync(dir).filter((file) => {
             const filePath = path.join(dir, file);
             return fs.statSync(filePath).isDirectory();
-        }).reverse()[0];
+        }).reverse()[0] || version;
     }
     const filename = path.join(dir,arch,'RELEASES');
     if(!fs.existsSync(filename)) return version;
