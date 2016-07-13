@@ -39,7 +39,12 @@ app.get('/download',(req,res)=>{
         });
         page += filteredFiles.length ? "</ul>\n" : "";
         res.set('Content-Type', 'text/html');
-        res.send(page);
+
+
+        fs.readFile(path.resolve(__dirname,'download.html'), function (err, content) {
+            if(err) return sendError(res,err);
+            return res.send(content.toString().replace('#page#', page));
+        });
     });
 });
 app.get('/updates/latest', (req, res) => {
