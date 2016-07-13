@@ -13,6 +13,35 @@ app.use(require('morgan')('dev'));
 app.use('/updates/releases', express.static(path.join(__dirname, 'releases')));
 app.use(require('connect-busboy')());
 
+app.get('/download',(req,res)=>{
+    let fileName = req.query.f;
+    let filePath = path.resolve(__dirname,'releases','download',fileName || '.');
+    if(fileName && path.basename(filePath) == fileName)
+        return res.download(filePath);
+    // res.setHeader('Content-disposition', 'attachment; filename='+fileName);
+    // var filestream = fs.createReadStream(filePath);
+    // filestream.pipe(res);
+    let dir = path.resolve(__dirname,'releases','download');
+    fs.readdir(dir,(err,files)=>{
+        if(err) return sendError(res,err);
+        let filteredFiles = files.filter((file) => {
+            const fp = path.join(filePath, file);
+            return fs.statSync(fp).isDirectory() || !file.match(/^\./);
+        });
+        let page = "<h1>Files to download</h1>\n";
+        page += filteredFiles.length ? "<h2>Chose a file to download</h2>\n<ul>\n" : "<h2>No files do download</h2>\n";
+        filteredFiles.forEach(file=>{
+            page += "\t<li>\n";
+            page += "\t\t<form method=\"GET\">\n";
+            page += "\t\t\t<input type='submit' value='"+file+"' name='f'/>\n";
+            page += "\t\t</form>\n";
+            page += "\t</li>\n";
+        });
+        page += filteredFiles.length ? "</ul>\n" : "";
+        res.set('Content-Type', 'text/html');
+        res.send(page);
+    });
+});
 app.get('/updates/latest', (req, res) => {
     const clientVersion = req.query.v;
     const platform = req.query.p || 'darwin';
