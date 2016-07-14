@@ -36,7 +36,6 @@ app.get('/download',(req,res)=>{
         filteredFiles.forEach(file=>{
             let stats = fs.statSync(path.join(dir,file));
             let size = stats.isDirectory() ? fsU.fsizeSync(path.join(dir,file)) : stats.size;
-            console.log(JSON.stringify(stats,null,4));
             page += "\t<tr>\n";
             page += "\t\t<td>"+file+"</td>\n";
             page += "\t\t<td>"+formatSize(size)+"</td>\n";
@@ -115,8 +114,6 @@ app.get('/viewReport',(req,res)=>{
 
 app.post('/crashReporter',bodyParser.urlencoded({ extended: false }),(req, res) => {
     var savePath;
-    console.log(JSON.stringify(req.body,null,2));
-    console.log('guid: '+req.body.guid);
     req.busboy.on('file',(fieldname, file, filename, encoding, mimetype)=>{
         savePath = path.join(__dirname,'dumps',filename);
         file.pipe(fs.createWriteStream(savePath));
