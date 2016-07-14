@@ -1,5 +1,6 @@
 'use strict';
 const fs = require('fs');
+const fsU = require('nodejs-fs-utils');
 const path = require('path');
 const express = require('express');
 const app = express();
@@ -26,18 +27,30 @@ app.get('/download',(req,res)=>{
         if(err) return sendError(res,err);
         let filteredFiles = files.filter((file) => {
             const fp = path.join(filePath, file);
-            return fs.statSync(fp).isDirectory() || !file.match(/^\./);
+            return !file.match(/^\./);
         });
         let page = "<h1>Files to download</h1>\n";
-        page += filteredFiles.length ? "<h2>Chose a file to download</h2>\n<ul>\n" : "<h2>No files do download</h2>\n";
+        page += filteredFiles.length ?
+            "<h4>Chose a file to download</h4>\n<table>\n\t<tr><th>Filename</th><th>Size</th><th>Last modified date</th><th>Platform</th><th>&nbsp;</th></tr>" :
+            "<h4>No files do download</h4>\n";
         filteredFiles.forEach(file=>{
-            page += "\t<li>\n";
-            page += "\t\t<form method=\"GET\">\n";
-            page += "\t\t\t<input type='submit' value='"+file+"' name='f'/>\n";
-            page += "\t\t</form>\n";
-            page += "\t</li>\n";
+            let stats = fs.statSync(path.join(dir,file));
+            let size = stats.isDirectory() ? fsU.fsizeSync(path.join(dir,file)) : stats.size;
+            console.log(JSON.stringify(stats,null,4));
+            page += "\t<tr>\n";
+            page += "\t\t<td>"+file+"</td>\n";
+            page += "\t\t<td>"+formatSize(size)+"</td>\n";
+            page += "\t\t<td>"+stats.mtime.toLocaleDateString()+" "+stats.mtime.toLocaleTimeString()+"</td>\n";
+            page += "\t\t<td>"+getPlatform(file)+"</td>\n";
+            page += "\t\t<td>\n";
+            page += "\t\t\t<form method=\"GET\">\n";
+            page += "\t\t\t\t<input type='submit' value='Download' class='btn btn-success' />\n";
+            page += "\t\t\t\t<input type='hidden' value='"+file+"' name='f' />\n";
+            page += "\t\t\t</form>\n";
+            page += "\t\t</td>\n";
+            page += "\t</tr>\n";
         });
-        page += filteredFiles.length ? "</ul>\n" : "";
+        page += filteredFiles.length ? "</table>\n" : "";
         res.set('Content-Type', 'text/html');
 
 
@@ -137,6 +150,31 @@ let getBaseUrl = () => {
 let sendError = (res, error) => {
     res.set('Content-Type', 'text/html');
     res.send('<h1 style="color:#a00;text-align:center;">Sorry, an ERROR occured</h1><small style="color:#eb0000;"><pre>'+error+'</pre></small>');
+};
+let formatSize = size => {
+    let out = size;
+    let level = -1;
+    while(out / 1000 > 0){
+        out = Math.floor(out / 1000);
+        ++level;
+    }
+    out = Math.floor(size / Math.pow(10,level*3));
+    switch(level){
+        case 0: return out+" B";
+        case 1: return out+" KB";
+        case 2: return out+" MB";
+        case 3: return out+" GB";
+        default: return size+" B";
+    }
+};
+let getPlatform = fname => {
+    switch(fname.replace(/(^.+)(\.[^.]+$)/,"$2")){
+        case ".exe":
+            let arch = fname.match(/(x64)|(ia32)/) ? fname.match(/(x64)/) ? " - 64 bits" : " - 32 bits" : "";
+            return "Windows"+arch;
+        case ".app": return "Mac OSX";
+        default: return "&nbsp;";
+    }
 };
 
 app.listen(PORT, () => {
